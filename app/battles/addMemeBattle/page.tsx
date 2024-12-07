@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { addMemeBattle, addMemeToBattle } from "../../../firebase";
+import { addMemeBattle } from "../../../firebase";
 import { useRouter } from "next/navigation";
 import { ethers } from "ethers";
 import { abi, contractAddress } from "../../../constant/abi";
@@ -16,6 +16,7 @@ const AddMemeBattle: React.FC = () => {
   const [memes, setMemes] = useState<
     Array<{ name: string; image: string; hashtag: string }>
   >([]);
+  const [battleDuration, setbattleDuration] = useState(600000); // 600000 default
   const [currentMeme, setCurrentMeme] = useState({
     name: "",
     image: "",
@@ -27,6 +28,7 @@ const AddMemeBattle: React.FC = () => {
     memeName: "",
     memeImage: "",
     memeHashtag: "",
+    battleDuration: 0,
   });
   const router = useRouter();
 
@@ -68,11 +70,21 @@ const AddMemeBattle: React.FC = () => {
     if (typeof window.ethereum !== "undefined") {
       try {
         await window.ethereum.request({ method: "eth_requestAccounts" });
-        const provider = new ethers.BrowserProvider(window.ethereum);
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
         const signer = await provider.getSigner();
         const contract = new ethers.Contract(contractAddress, abi, signer);
 
-        const tx = await contract.createBattle(battleId, memeNames, 240);
+        // Minimum stake of 0.00001 ether
+        const stake = ethers.utils.parseEther("0.00001");
+
+        const tx = await contract.createBattle(
+          battleId,
+          memeNames,
+          battleDuration,
+          {
+            value: stake,
+          }
+        );
         await tx.wait();
         console.log("Battle created on contract");
       } catch (error) {
@@ -173,6 +185,38 @@ const AddMemeBattle: React.FC = () => {
               )}
             </div>
           </div>
+
+          <div>
+            <label
+              htmlFor="battleDuration"
+              className="block mb-2 text-lg font-semibold text-neon-blue"
+            >
+              Battle Duration (seconds):
+            </label>
+            <div className="flex items-center">
+              <input
+                type="number"
+                id="battleDuration"
+                value={battleDuration}
+                // min={60} // Minimum 1 minute
+                // max={1800} // Maximum 30 minutes
+                onChange={(e) => setbattleDuration(Number(e.target.value))}
+                className={`w-full px-4 py-2 border-2 ${
+                  errors.battleDuration ? "border-neon-red" : "border-neon-blue"
+                } bg-black/50 rounded-lg text-neon-green outline-none focus:ring-2 focus:ring-neon-purple transition-all duration-300`}
+              />
+              {/* <Timer className="ml-2 text-neon-blue" size={24} /> */}
+            </div>
+            <p className="text-sm text-neon-green mt-1">
+              Duration between 1-30 minutes (60-1800 seconds)
+            </p>
+            {errors.battleDuration && (
+              <p className="text-neon-red text-sm mt-1">
+                {errors.battleDuration}
+              </p>
+            )}
+          </div>
+
           <div className="border-2 border-neon-purple p-6 rounded-lg bg-black/30 backdrop-blur-sm">
             <h2 className="text-xl font-bold text-neon-green mb-4">
               Add Memes to Battle
