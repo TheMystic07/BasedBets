@@ -11,6 +11,7 @@ import {
   getDoc,
   doc,
 } from "firebase/firestore";
+import { abi, contractAddress } from "../constant/abi";
 import {
   db,
   getMemeDetails,
@@ -208,7 +209,7 @@ const MemeChatroom: React.FC<MemeChatroomProps> = ({ battleId, memeIndex }) => {
       return;
     }
 
-    const betAmountWei = ethers.parseEther(currentBetAmount || "0");
+    const betAmountWei = ethers.utils.parseEther(currentBetAmount || "0");
     const roomIdBigInt = BigInt(memeIndex);
 
     const UserAddress = account as `0x${string}`;
@@ -223,27 +224,21 @@ const MemeChatroom: React.FC<MemeChatroomProps> = ({ battleId, memeIndex }) => {
 
     try {
       toast.info("Placing bet...", { autoClose: false });
-      const createAttestationRes = await client.createAttestation(
+
+      await window.ethereum.request({ method: "eth_requestAccounts" });
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contract = new ethers.Contract(contractAddress, abi, signer);
+
+      const createAttestationRes = await contract.placeBet(
+        battleId,
+        memeIdForContract,
         {
-          schemaId: "0xe9",
-          data: {
-            user: UserAddress,
-            battleId: battleId as string,
-            meme_id: memeIdForContract as BigInt,
-            bet_amount: betAmountWei,
-            bet_timestamp: Math.floor(Date.now() / 1000),
-            win_amount: BigInt(0),
-            action: "USER_BET",
-          },
-          indexingValue: `${account.toLowerCase()}`,
-        },
-        {
-          resolverFeesETH: betAmountWei,
-          getTxHash: (txHash) => {
-            console.log("Transaction hash:", txHash as `0x${string}`);
-          },
+          value: betAmountWei,
         }
       );
+
+      await createAttestationRes.wait();
 
       if (createAttestationRes) {
         setAttestationCreated(true);
