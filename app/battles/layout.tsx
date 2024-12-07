@@ -1,49 +1,58 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
+import { Menu, X } from "lucide-react";
 
 export default function DashboardLayout({
-  children, // will be a page or nested layout
+  children,
 }: {
   children: React.ReactNode;
 }) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   return (
-    <section className="bg-[#080B0F] min-h-screen p-6">
-      <div className="w-full h-fit py-5 bg-transparent backdrop-blur-2xl border-2 border-[#8301D3] to rounded-3xl flex justify-between items-center relative text-white px-10">
-        <div>
+    <section className="bg-black min-h-screen p-4 sm:p-6 font-mono">
+      <nav className="w-full h-fit py-3 sm:py-5 bg-black/50 backdrop-blur-xl border-2 border-neon-purple rounded-2xl sm:rounded-3xl flex flex-col sm:flex-row justify-between items-center relative text-neon-blue px-4 sm:px-10 mb-6">
+        <div className="flex justify-between items-center w-full sm:w-auto">
           <Link
             href={"/"}
-            className="text-2xl font-bold text-center text-transparent bg-clip-text bg-white cursor-pointer"
+            className="text-2xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-neon-blue to-neon-purple animate-pulse cursor-pointer"
           >
             Meme Battles
           </Link>
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="sm:hidden text-neon-blue hover:text-neon-purple transition-colors duration-300"
+          >
+            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
         </div>
-        <div className="flex justify-center items-center gap-7">
+        <div
+          className={`${
+            isMenuOpen ? "flex" : "hidden"
+          } sm:flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-7 w-full sm:w-auto mt-4 sm:mt-0`}
+        >
           <Link
             href={"/battles"}
-            className=" text-gray-300 font-semibold transition-all duration-300 cursor-pointer link-underline link-underline-black text-lg"
+            className="text-neon-green hover:text-neon-blue font-semibold transition-all duration-300 cursor-pointer text-base sm:text-lg relative group"
           >
             Battle Page
+            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-neon-blue transition-all group-hover:w-full"></span>
           </Link>
-
           <Link
             href={"/profile"}
-            className="text-gray-300 transition-all duration-300 font-semibold cursor-pointer link-underline link-underline-black text-lg"
+            className="text-neon-green hover:text-neon-blue font-semibold transition-all duration-300 cursor-pointer text-base sm:text-lg relative group"
           >
             Profile
+            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-neon-blue transition-all group-hover:w-full"></span>
           </Link>
         </div>
-        {/* <Link
-          href={"/battles"}
-          className="absolute left-5 text-gray-200 font-semibold bg-[#6B0CDF] px-4 py-2 rounded-xl cursor-pointer border-2 border-transparent hover:border-2 hover:border-[#6B0CDF] hover:bg-transparent"
-        >
-          Battle Page
-        </Link>
-        
-        <div className="absolute right-5 text-gray-200 font-semibold bg-[#6B0CDF] px-4 py-2 rounded-xl cursor-pointer border-2 border-transparent hover:border-2 hover:border-[#6B0CDF] hover:bg-transparent">
-          Connect Wallet
-        </div> */}
-      </div>
-
-      {children}
+      </nav>
+      <main className="relative">
+        <div className="absolute inset-0 bg-grid-neon-blue/10 animate-grid-flow pointer-events-none"></div>
+        {children}
+      </main>
     </section>
   );
 }

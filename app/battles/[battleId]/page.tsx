@@ -1,28 +1,23 @@
-import { Suspense } from 'react';
-import BattleDetails from '../../../components/BattleDetails';
+import { Suspense } from "react";
+import BattleDetails from "../../../components/BattleDetails";
+import { Loader2 } from "lucide-react";
 
 const LoadingScreen = () => (
-  <div className="flex items-center justify-center min-h-screen bg-[white] text-white">
-    <div className="text-center text-white">
-      <svg
-        className="w-12 h-12 mx-auto mb-4 animate-spin"
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <circle cx="12" cy="12" r="10" />
-        <path d="M4 12a8 8 0 0 1 16 0" />
-      </svg>
-      <p className="text-xl font-semibold text-white">Loading...</p>
+  <div className="flex items-center justify-center min-h-screen bg-black text-neon-blue">
+    <div className="text-center">
+      <Loader2 className="w-16 h-16 mx-auto mb-4 animate-spin" />
+      <p className="text-2xl font-bold animate-pulse">
+        Initializing Cyber Battle...
+      </p>
     </div>
   </div>
 );
 
-export default function BattleDetailsPage({ params }: { params: { battleId: string } }) {
+export default function BattleDetailsPage({
+  params,
+}: {
+  params: { battleId: string };
+}) {
   return (
     <Suspense fallback={<LoadingScreen />}>
       <BattleDetails battleId={params.battleId} />

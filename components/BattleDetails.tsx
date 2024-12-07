@@ -1,12 +1,14 @@
 "use client";
+
 import React, { useState, useEffect } from "react";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/firebase";
 import Link from "next/link";
 import { ethers } from "ethers";
-import { abi , contractAddress} from "../constant/abi";
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { abi, contractAddress } from "../constant/abi";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { Clock, Trophy, Zap, AlertTriangle } from "lucide-react";
 
 interface Meme {
   name: string;
@@ -20,7 +22,6 @@ const BattleDetails: React.FC<{ battleId: string }> = ({ battleId }) => {
   const [timeLeft, setTimeLeft] = useState<string>("");
   const [winningMemeIndex, setWinningMemeIndex] = useState<number | null>(null);
   const [showDeclareWinnerButton, setShowDeclareWinnerButton] = useState(false);
-  const [showTestButton, setShowTestButton] = useState(true);
 
   useEffect(() => {
     const fetchBattleDetails = async () => {
@@ -50,7 +51,6 @@ const BattleDetails: React.FC<{ battleId: string }> = ({ battleId }) => {
           clearInterval(timer);
           setTimeLeft("Battle Ended");
           if (battle.winningMeme === null) {
-            // Show the "Declare Winner" button
             setShowDeclareWinnerButton(true);
           }
         } else {
@@ -62,8 +62,6 @@ const BattleDetails: React.FC<{ battleId: string }> = ({ battleId }) => {
           setTimeLeft(`${hours}h ${minutes}m ${seconds}s`);
         }
       }, 1000);
-
-      
 
       return () => clearInterval(timer);
     }
@@ -119,25 +117,36 @@ const BattleDetails: React.FC<{ battleId: string }> = ({ battleId }) => {
         return;
       }
 
-      if (typeof window.ethereum !== 'undefined') {
+      if (typeof window.ethereum !== "undefined") {
         try {
-          await window.ethereum.request({ method: 'eth_requestAccounts' });
+          await window.ethereum.request({ method: "eth_requestAccounts" });
           const provider = new ethers.BrowserProvider(window.ethereum);
           const signer = await provider.getSigner();
           const contract = new ethers.Contract(contractAddress, abi, signer);
 
-          toast.info("Declaring winner on the blockchain...", { autoClose: false });
-          const tx = await contract.declareWinner(battleId, winningIndex + 1 as BigInt);
+          toast.info("Declaring winner on the blockchain...", {
+            autoClose: false,
+          });
+          const tx = await contract.declareWinner(
+            battleId,
+            (winningIndex + 1) as BigInt
+          );
           await tx.wait();
           toast.success("Winner declared on the blockchain!");
         } catch (error) {
-          console.error('Error declaring winner on contract:', error);
-          toast.error("Error declaring winner on the blockchain. Please try again.");
+          console.error("Error declaring winner on contract:", error);
+          toast.error(
+            "Error declaring winner on the blockchain. Please try again."
+          );
           return;
         }
       } else {
-        console.error('Ethereum object not found, do you have MetaMask installed?');
-        toast.error("MetaMask not detected. Please install MetaMask and try again.");
+        console.error(
+          "Ethereum object not found, do you have MetaMask installed?"
+        );
+        toast.error(
+          "MetaMask not detected. Please install MetaMask and try again."
+        );
         return;
       }
 
@@ -156,75 +165,92 @@ const BattleDetails: React.FC<{ battleId: string }> = ({ battleId }) => {
     }
   };
 
-  if (!battle) return <div>Loading...</div>;
-
-
-  // const callContractDeclareWinner = async (winningIndex: number) => {
-  //   if (typeof window.ethereum !== 'undefined') {
-  //     try {
-  //       await window.ethereum.request({ method: 'eth_requestAccounts' });
-  //       const provider = new ethers.BrowserProvider(window.ethereum);
-  //       const signer = await provider.getSigner();
-  //       const contract = new ethers.Contract(contractAddress, abi, signer);
-  
-  //       const tx = await contract.declareWinner(battleId, winningIndex + 1);
-  //       await tx.wait();
-  //       console.log('Winner declared on contract');
-  //       setShowTestButton(false);
-  //     } catch (error) {
-  //       console.error('Error declaring winner on contract:', error);
-  //     }
-  //   } else {
-  //     console.error('Ethereum object not found, do you have MetaMask installed?');
-  //   }
-  // };
+  if (!battle)
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-black text-neon-blue">
+        <div className="text-center">
+          <AlertTriangle className="w-16 h-16 mx-auto mb-4 animate-pulse" />
+          <p className="text-2xl font-bold">Battle not found or loading...</p>
+        </div>
+      </div>
+    );
 
   return (
-    <div className="p-6 bg-[#080B0F] min-h-screen">
-      <h1 className="text-4xl font-bold text-[#6B0CDF] mb-4">{battle.name}</h1>
-      <p className="text-xl text-gray-400 mb-4">{battle.description}</p>
-      <p className="text-lg text-red-500 mb-6">Time left: {timeLeft}</p>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {battle.memes.map((meme: any, index: number) => (
-          <Link
-            href={`/battles/${battleId}/memes/${index}`}
-            key={index}
-            className="bg-[#18191A] border-2 border-[#6B0CDF] p-4 rounded-lg shadow-lg"
-          >
-            <img
-              src={meme.image}
-              alt={meme.name}
-              className="w-full h-48 object-cover rounded-md mb-4"
-            />
-            <h2 className="text-2xl font-bold text-white mb-2">{meme.name}</h2>
-            <p className="text-gray-400 mb-4">#{meme.hashtag}</p>
-            {/* <Link href={`/battles/${battleId}/memes/${index}`} className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors">
-              Join Chatroom
-            </Link> */}
-          </Link>
-        ))}
-      </div>
-      {showDeclareWinnerButton && (
-        <button
-          onClick={declareWinner}
-          className="mt-8 bg-green-500 text-white px-6 py-3 rounded-md hover:bg-green-600 transition-colors"
-        >
-          Declare Winner
-        </button>
-      )}
-      {battle.winningMeme !== undefined && (
-        <div className="mt-8">
-          <h2 className="text-2xl font-bold text-white mb-4">
-            Winner: {battle?.memes[battle.winningMeme]?.name}
-          </h2>
-          <img
-            src={battle?.memes[battle.winningMeme]?.image}
-            alt={battle?.memes[battle.winningMeme]?.name}
-            className="w-64 h-64 object-cover rounded-md"
-          />
+    <div className="min-h-screen bg-black text-neon-blue p-6 flex flex-col items-center">
+      <div className="w-full max-w-7xl">
+        <h1 className="text-4xl md:text-6xl font-bold text-neon-purple mb-4 animate-pulse">
+          {battle.name}
+        </h1>
+        <p className="text-xl text-neon-green mb-6">{battle.description}</p>
+        <div className="flex items-center justify-between mb-8 bg-black/50 p-4 rounded-lg border border-neon-blue">
+          <div className="flex items-center">
+            <Clock className="w-6 h-6 mr-2 text-neon-pink" />
+            <span className="text-lg font-semibold">{timeLeft}</span>
+          </div>
+          {showDeclareWinnerButton && (
+            <button
+              onClick={declareWinner}
+              className="bg-neon-green text-black px-6 py-3 rounded-md hover:bg-neon-blue transition-colors duration-300 flex items-center"
+            >
+              <Trophy className="w-5 h-5 mr-2" />
+              Declare Winner
+            </button>
+          )}
         </div>
-      )}
-      <ToastContainer position="bottom-right" />
+        <div className="flex flex-col md:flex-row gap-4 md:gap-8 justify-center">
+          {battle.memes.map((meme: Meme, index: number) => (
+            <Link
+              href={`/battles/${battleId}/memes/${index}`}
+              key={index}
+              className="group w-full max-w-sm"
+            >
+              <div className="battle-card bg-black/70 border-2 border-neon-purple p-6 rounded-lg shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-neon-purple/50 relative overflow-hidden h-full flex flex-col">
+                <div className="absolute inset-0 bg-grid-neon-blue/10 animate-grid-flow pointer-events-none"></div>
+                <img
+                  src={meme.image}
+                  alt={meme.name}
+                  className="w-full h-48 object-cover rounded-md mb-4"
+                />
+                <h2 className="text-2xl font-bold text-neon-blue mb-2">
+                  {meme.name}
+                </h2>
+                <p className="text-neon-green mb-4 flex-grow">
+                  #{meme.hashtag}
+                </p>
+                <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-neon-blue via-neon-purple to-neon-pink"></div>
+              </div>
+            </Link>
+          ))}
+        </div>
+        {battle.winningMeme !== undefined && (
+          <div className="mt-12 bg-black/70 border-2 border-neon-green p-6 rounded-lg max-w-xl mx-auto">
+            <h2 className="text-3xl font-bold text-neon-green mb-4 flex items-center justify-center">
+              <Trophy className="w-8 h-8 mr-2" />
+              Winner: {battle?.memes[battle.winningMeme]?.name}
+            </h2>
+            <div className="flex flex-col items-center justify-center">
+              <img
+                src={battle?.memes[battle.winningMeme]?.image}
+                alt={battle?.memes[battle.winningMeme]?.name}
+                className="w-64 h-64 object-cover rounded-md mb-4 md:mb-0 md:mr-6"
+              />
+              <div className="text-center w-full mt-4">
+                <p className="text-xl text-neon-blue mb-2">
+                  Hashtag: #{battle?.memes[battle.winningMeme]?.hashtag}
+                </p>
+                <p className="text-lg text-neon-pink">
+                  Congratulations to the winner of this epic Cyber Battle!
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+      <ToastContainer
+        position="bottom-right"
+        theme="dark"
+        toastClassName="bg-black border-2 border-neon-purple text-neon-blue"
+      />
     </div>
   );
 };

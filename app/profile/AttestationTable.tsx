@@ -1,11 +1,18 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect } from "react";
 import { ethers } from "ethers";
-import { EvmChains, IndexService, SignProtocolClient, SpMode } from '@ethsign/sp-sdk';
+import {
+  EvmChains,
+  IndexService,
+  SignProtocolClient,
+  SpMode,
+} from "@ethsign/sp-sdk";
 import { decodeAbiParameters } from "viem";
-import { getBattleStatus, getWinningMeme } from '@/firebase';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { getBattleStatus, getWinningMeme } from "@/firebase";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { Clock, DollarSign, Zap, Award } from "lucide-react";
 
 interface Attestation {
   id: string;
@@ -20,18 +27,21 @@ const AttestationTable: React.FC = () => {
   const [attestations, setAttestations] = useState<Attestation[]>([]);
   const [decodedData, setDecodedData] = useState<any[]>([]);
   const [address, setAddress] = useState<string | null>(null);
-  const [claimableAttestations, setClaimableAttestations] = useState<{[key: string]: boolean}>({});
+  const [claimableAttestations, setClaimableAttestations] = useState<{
+    [key: string]: boolean;
+  }>({});
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const connectWallet = async () => {
-      if (typeof window.ethereum !== 'undefined') {
+      if (typeof window.ethereum !== "undefined") {
         try {
           const provider = new ethers.BrowserProvider(window.ethereum);
           const signer = await provider.getSigner();
           const address = await signer.getAddress();
           setAddress(address);
         } catch (error) {
-          console.error('Error connecting to wallet:', error);
+          console.error("Error connecting to wallet:", error);
         }
       }
     };
@@ -49,12 +59,12 @@ const AttestationTable: React.FC = () => {
           attester: "",
           page: 1,
           mode: "onchain",
-          indexingValue: ""
+          indexingValue: "",
         });
 
         if (res?.rows) {
           const filteredAttestations = res.rows.filter(
-            (attestation: Attestation) => 
+            (attestation: Attestation) =>
               attestation.attester.toLowerCase() === address.toLowerCase()
           );
           setAttestations(filteredAttestations);
@@ -68,11 +78,14 @@ const AttestationTable: React.FC = () => {
 
   useEffect(() => {
     const checkClaimableAttestations = async () => {
-      const claimable: {[key: string]: boolean} = {};
+      const claimable: { [key: string]: boolean } = {};
       for (const att of attestations) {
-        const decoded = decodedData.find(d => d?.battleId === att.id);
+        const decoded = decodedData.find((d) => d?.battleId === att.id);
         if (decoded) {
-          claimable[att.id] = await canUserClaim(decoded.battleId, decoded.meme_id);
+          claimable[att.id] = await canUserClaim(
+            decoded.battleId,
+            decoded.meme_id
+          );
         }
       }
       setClaimableAttestations(claimable);
@@ -84,35 +97,41 @@ const AttestationTable: React.FC = () => {
   }, [attestations, decodedData]);
 
   const decodeAttestationData = (attestations: Attestation[]) => {
-    const decodedDataObjects = attestations.map(att => {
-      if (!att.data) return null;
+    const decodedDataObjects = attestations
+      .map((att) => {
+        if (!att.data) return null;
 
-      try {
-        const hexData = att.data.startsWith('0x') ? att.data : `0x${att.data}`;
-        const decodedData = decodeAbiParameters(
-          att.schema.data,
-          hexData as `0x${string}`
-        ) as [string ,string ,bigint, bigint, bigint, bigint, string]; // Add this type assertion
+        try {
+          const hexData = att.data.startsWith("0x")
+            ? att.data
+            : `0x${att.data}`;
+          const decodedData = decodeAbiParameters(
+            att.schema.data,
+            hexData as `0x${string}`
+          ) as [string, string, bigint, bigint, bigint, bigint, string]; // Add this type assertion
 
-        return {
-          battleId : decodedData[1].toString(),
-          meme_id: decodedData[2].toString(),
-          bet_amount: ethers.formatEther(decodedData[3].toString()),
-          bet_timestamp: new Date(Number(decodedData[4]) * 1000).toLocaleString(),
-          action: decodedData[6].toString()
-        };
-      } catch (error) {
-        console.error('Error decoding attestation data:', error);
-        return null;
-      }
-    }).filter(Boolean);
+          return {
+            battleId: decodedData[1].toString(),
+            meme_id: decodedData[2].toString(),
+            bet_amount: ethers.formatEther(decodedData[3].toString()),
+            bet_timestamp: new Date(
+              Number(decodedData[4]) * 1000
+            ).toLocaleString(),
+            action: decodedData[6].toString(),
+          };
+        } catch (error) {
+          console.error("Error decoding attestation data:", error);
+          return null;
+        }
+      })
+      .filter(Boolean);
 
     setDecodedData(decodedDataObjects);
   };
 
   const canUserClaim = async (battleId: string, memeId: string) => {
     const battleStatus = await getBattleStatus(battleId);
-    if (battleStatus !== 'ended') return false;
+    if (battleStatus !== "ended") return false;
 
     const winningMeme = await getWinningMeme(battleId);
     return winningMeme === memeId;
@@ -120,8 +139,10 @@ const AttestationTable: React.FC = () => {
 
   const handleClaim = async (battleId: string, memeId: string) => {
     if (!address) {
-      console.error('No wallet connected');
-      toast.error('No wallet connected. Please connect your wallet and try again.');
+      console.error("No wallet connected");
+      toast.error(
+        "No wallet connected. Please connect your wallet and try again."
+      );
       return;
     }
 
@@ -130,7 +151,7 @@ const AttestationTable: React.FC = () => {
     });
 
     try {
-      toast.info('Creating claim attestation...', { autoClose: false });
+      toast.info("Creating claim attestation...", { autoClose: false });
       const createAttestationRes = await client.createAttestation(
         {
           schemaId: "0xe9",
@@ -154,63 +175,109 @@ const AttestationTable: React.FC = () => {
       );
 
       if (createAttestationRes) {
-        console.log('Claim attestation created successfully');
-        toast.success('Claim attestation created successfully!');
+        console.log("Claim attestation created successfully");
+        toast.success("Claim attestation created successfully!");
         // Update the UI or state as needed
       }
     } catch (error) {
-      console.error('Error creating claim attestation:', error);
-      toast.error('Error creating claim attestation. Please try again.');
+      console.error("Error creating claim attestation:", error);
+      toast.error("Error creating claim attestation. Please try again.");
     }
   };
 
   return (
-    <div className="bg-gray-900 bg-opacity-60 rounded-3xl shadow-2xl p-8 backdrop-blur-lg">
-      {/* <h2 className="text-3xl font-bold text-[#5A08C0] mb-6">Your Attestations</h2> */}
-      {attestations.length === 0 ? (
-        <p className="text-gray-400 text-center py-8">No attestations found. Start betting to see your activity!</p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-800 bg-opacity-50">
-              <th className="p-4 text-sm font-semibold text-[#410DEF] uppercase tracking-wider">Battle Id</th>
-                <th className="p-4 text-sm font-semibold text-[#410DEF] uppercase tracking-wider">Meme Id</th>
-                <th className="p-4 text-sm font-semibold text-[#410DEF] uppercase tracking-wider">Bet Amount (ETH)</th>
-                <th className="p-4 text-sm font-semibold text-[#410DEF] uppercase tracking-wider">Bet Timestamp</th>
-                <th className="p-4 text-sm font-semibold text-[#410DEF] uppercase tracking-wider">Action</th>
-                <th className="p-4 text-sm font-semibold text-[#410DEF] uppercase tracking-wider">Claim</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-700">
-              {attestations.map((attestation, index) => (
-                <tr key={attestation.id} className="hover:bg-gray-800 hover:bg-opacity-30 transition-colors duration-200">
-                  <td className="p-4 text-gray-300">{decodedData[index]?.battleId}</td>
-                  <td className="p-4 text-gray-300">{decodedData[index]?.meme_id}</td>
-                  <td className="p-4 text-gray-300">{decodedData[index]?.bet_amount}</td>
-                  <td className="p-4 text-gray-300">{decodedData[index]?.bet_timestamp}</td>
-                  <td className="p-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      decodedData[index]?.action === 'USER_BET' ? 'bg-[#5A08C0] text-blue-100' : 'bg-[#5A08C0] text-green-100'
-                    }`}>
-                      {decodedData[index]?.action}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <button
-                      className={claimableAttestations[attestation.id] ? 'bg-green-500 hover:bg-green-600' : 'bg-purple-500 hover:bg-purple-600'}
-                      onClick={() => handleClaim(decodedData[index]?.battleId, decodedData[index]?.meme_id)}
-                    >
-                      Claim
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <div className="overflow-x-auto">
+      {isLoading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-neon-purple"></div>
         </div>
+      ) : attestations.length === 0 ? (
+        <p className="text-neon-blue text-center py-8">
+          No attestations found. Start betting to see your activity!
+        </p>
+      ) : (
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="border-b border-neon-purple">
+              <th className="p-4 text-sm font-semibold text-neon-green uppercase tracking-wider">
+                Battle Id
+              </th>
+              <th className="p-4 text-sm font-semibold text-neon-green uppercase tracking-wider">
+                Meme Id
+              </th>
+              <th className="p-4 text-sm font-semibold text-neon-green uppercase tracking-wider">
+                Bet Amount (ETH)
+              </th>
+              <th className="p-4 text-sm font-semibold text-neon-green uppercase tracking-wider">
+                Bet Timestamp
+              </th>
+              <th className="p-4 text-sm font-semibold text-neon-green uppercase tracking-wider">
+                Action
+              </th>
+              <th className="p-4 text-sm font-semibold text-neon-green uppercase tracking-wider">
+                Claim
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-neon-purple/30">
+            {attestations.map((attestation, index) => (
+              <tr
+                key={attestation.id}
+                className="hover:bg-neon-purple/10 transition-colors duration-200"
+              >
+                <td className="p-4 text-neon-blue">
+                  {decodedData[index]?.battleId}
+                </td>
+                <td className="p-4 text-neon-blue">
+                  {decodedData[index]?.meme_id}
+                </td>
+                <td className="p-4 text-neon-blue flex items-center">
+                  <DollarSign className="w-4 h-4 mr-1 text-neon-green" />
+                  {decodedData[index]?.bet_amount}
+                </td>
+                <td className="p-4 text-neon-blue flex items-center">
+                  <Clock className="w-4 h-4 mr-1 text-neon-pink" />
+                  {decodedData[index]?.bet_timestamp}
+                </td>
+                <td className="p-4">
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      decodedData[index]?.action === "USER_BET"
+                        ? "bg-neon-purple text-black"
+                        : "bg-neon-green text-black"
+                    }`}
+                  >
+                    {decodedData[index]?.action}
+                  </span>
+                </td>
+                <td className="p-4">
+                  <button
+                    className={`px-4 py-2 rounded-lg text-black font-semibold flex items-center ${
+                      claimableAttestations[attestation.id]
+                        ? "bg-neon-green hover:bg-neon-blue"
+                        : "bg-neon-purple hover:bg-neon-pink"
+                    } transition-colors duration-300`}
+                    onClick={() =>
+                      handleClaim(
+                        decodedData[index]?.battleId,
+                        decodedData[index]?.meme_id
+                      )
+                    }
+                  >
+                    <Award className="w-4 h-4 mr-2" />
+                    Claim
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
-      <ToastContainer position="bottom-right" />
+      <ToastContainer
+        position="bottom-right"
+        theme="dark"
+        toastClassName="bg-black border-2 border-neon-purple text-neon-blue"
+      />
     </div>
   );
 };
